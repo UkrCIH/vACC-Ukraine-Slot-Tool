@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pilot Interface - File Departure</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            color: #555;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .atc-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .atc-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .atc-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✈️ Pilot Interface</h1>
+        <p class="subtitle">File your departure time</p>
+
+        <form id="departureForm">
+            <div class="form-group">
+                <label for="callsign">Callsign</label>
+                <input type="text" id="callsign" placeholder="e.g., AUI123" required>
+            </div>
+
+            <div class="form-group">
+                <label for="departureTime">Departure Time (Zulu/UTC)</label>
+                <input type="time" id="departureTime" required>
+                <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                    Today's date: <span id="currentDate"></span> (UTC)
+                </div>
+            </div>
+
+            <button type="submit">File Departure</button>
+        </form>
+
+        <div id="message" class="message"></div>
+
+        <div class="atc-link">
+            <a href="/atc">ATC Monitoring Interface →</a>
+        </div>
+    </div>
+
+    <script>
+        // Display current date in UTC
+        function updateCurrentDate() {
+            const now = new Date();
+            const utcDate = now.toISOString().split('T')[0];
+            const options = { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' };
+            document.getElementById('currentDate').textContent = 
+                new Date(utcDate + 'T00:00:00Z').toLocaleDateString('en-US', options);
+        }
+        
+        updateCurrentDate();
+        // Update date every minute in case it changes
+        setInterval(updateCurrentDate, 60000);
+
+        document.getElementById('departureForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const callsign = document.getElementById('callsign').value.trim();
+            const departureTime = document.getElementById('departureTime').value; // HH:MM format
+
+            if (!callsign || !departureTime) {
+                showMessage('Please fill in all fields', 'error');
+                return;
+            }
+
+            // Get today's date in UTC and combine with the time
+            const now = new Date();
+            const utcDate = now.toISOString().split('T')[0]; // YYYY-MM-DD in UTC
+            const departureDateTime = `${utcDate}T${departureTime}:00`; // Combine date and time
+
+            try {
+                const response = await fetch('/api/departures', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        callsign: callsign,
+                        departure_time: departureDateTime
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(`Departure filed successfully for ${callsign}!`, 'success');
+                    document.getElementById('departureForm').reset();
+                } else {
+                    showMessage(data.message || 'Failed to file departure', 'error');
+                }
+            } catch (error) {
+                showMessage('Error connecting to server', 'error');
+            }
+        });
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
