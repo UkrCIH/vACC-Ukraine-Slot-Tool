@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frankfurt EDDF - Test Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            color: #1e3c72;
+            font-size: 28px;
+        }
+
+        .close-btn {
+            padding: 10px 20px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .close-btn:hover {
+            background: #c82333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 15px;
+            background: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-button.active {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+
+        .tab-button:hover:not(.active) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .section-content {
+            display: none;
+        }
+
+        .section-content.active {
+            display: block;
+        }
+
+        .auto-refresh {
+            background: white;
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .data-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow-x: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            background: #28a745;
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        .data-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 13px;
+        }
+
+        .data-table tr:hover {
+            background: #f5f5f5;
+        }
+
+        .separation-ok {
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .separation-warning {
+            color: #ffc107;
+            font-weight: 600;
+        }
+
+        .separation-danger {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .source-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .source-badge.vatsim-prefile {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .source-badge.vatsim-ground {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .departures-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .departure-card {
+            background: white;
+            border: 2px solid #28a745;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .callsign {
+            font-size: 20px;
+            font-weight: bold;
+            color: #28a745;
+            margin-bottom: 10px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .info-label {
+            color: #666;
+            font-weight: 600;
+        }
+
+        .info-value {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🇩🇪 Frankfurt EDDF - Test Interface</h1>
+            <button class="close-btn" onclick="window.close()">Close Window</button>
+        </div>
+
+        <div class="section-tabs">
+            <button class="tab-button active" onclick="switchTab('departures')">Departures</button>
+            <button class="tab-button" onclick="switchTab('arrivals')">Arrivals</button>
+        </div>
+
+        <!-- Departures Section -->
+        <div id="departures-section" class="section-content active">
+            <div class="auto-refresh">
+                🔄 Auto-refreshing every 10 seconds • Last update: <span id="departuresLastUpdate">--</span>
+            </div>
+            <div id="departuresContainer"></div>
+        </div>
+
+        <!-- Arrivals Section -->
+        <div id="arrivals-section" class="section-content">
+            <div class="auto-refresh">
+                🔄 Auto-refreshing every 10 seconds • Last update: <span id="arrivalsLastUpdate">--</span>
+            </div>
+            <div id="arrivalsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        let departuresRefreshInterval;
+        let arrivalsRefreshInterval;
+        const AIRPORT_ICAO = 'EDDF';
+
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.querySelectorAll('.section-content').forEach(section => section.classList.remove('active'));
+            document.getElementById(tab + '-section').classList.add('active');
+
+            if (tab === 'departures') {
+                if (!departuresRefreshInterval) {
+                    departuresRefreshInterval = setInterval(loadDepartures, 10000);
+                }
+                if (arrivalsRefreshInterval) {
+                    clearInterval(arrivalsRefreshInterval);
+                    arrivalsRefreshInterval = null;
+                }
+            } else if (tab === 'arrivals') {
+                if (departuresRefreshInterval) {
+                    clearInterval(departuresRefreshInterval);
+                    departuresRefreshInterval = null;
+                }
+                if (!arrivalsRefreshInterval) {
+                    arrivalsRefreshInterval = setInterval(loadArrivals, 10000);
+                }
+                loadArrivals();
+            }
+        }
+
+        // Load departures
+        async function loadDepartures() {
+            try {
+                const response = await fetch(`/api/all-departures/${AIRPORT_ICAO}`);
+                const data = await response.json();
+                
+                document.getElementById('departuresLastUpdate').textContent = new Date().toLocaleTimeString();
+
+                const container = document.getElementById('departuresContainer');
+                const departures = data.vatsim_departures || [];
+
+                if (departures.length === 0) {
+                    container.innerHTML = `
+                        <div class="data-container">
+                            <div class="no-data">
+                                <h2>No Departures</h2>
+                                <p>No VATSIM departures currently at Frankfurt EDDF</p>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '<div class="data-container"><div class="departures-grid">';
+                
+                departures.forEach(dep => {
+                    const badgeClass = dep.source === 'vatsim_prefile' ? 'vatsim-prefile' : 'vatsim-ground';
+                    const badgeText = dep.source === 'vatsim_prefile' ? 'PREFILE' : 'ON GROUND';
+
+                    html += `
+                        <div class="departure-card">
+                            <div class="callsign">
+                                ${dep.callsign}
+                                <span class="source-badge ${badgeClass}">${badgeText}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Aircraft:</span>
+                                <span class="info-value">${dep.aircraft_type}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Destination:</span>
+                                <span class="info-value">${dep.destination}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Altitude:</span>
+                                <span class="info-value">${dep.altitude}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Route:</span>
+                                <span class="info-value" style="font-size: 11px; word-break: break-all;">${dep.route.substring(0, 60)}${dep.route.length > 60 ? '...' : ''}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div></div>';
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading departures:', error);
+            }
+        }
+
+        // Load arrivals
+        async function loadArrivals() {
+            try {
+                const response = await fetch(`/api/arrivals/${AIRPORT_ICAO}`);
+                const data = await response.json();
+                
+                document.getElementById('arrivalsLastUpdate').textContent = new Date().toLocaleTimeString();
+
+                const container = document.getElementById('arrivalsContainer');
+
+                if (data.arrivals.length === 0) {
+                    container.innerHTML = `
+                        <div class="data-container">
+                            <div class="no-data">
+                                <h2>No Arrivals</h2>
+                                <p>No aircraft currently inbound to Frankfurt EDDF</p>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = `
+                    <div class="data-container">
+                        <h2 style="margin-bottom: 15px; color: #28a745;">
+                            Frankfurt EDDF - ${data.total_count} Arrival${data.total_count !== 1 ? 's' : ''}
+                        </h2>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Callsign</th>
+                                    <th>Aircraft</th>
+                                    <th>From</th>
+                                    <th>Altitude</th>
+                                    <th>GS (kts)</th>
+                                    <th>Distance (NM)</th>
+                                    <th>ETA (min)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                data.arrivals.forEach((arrival, index) => {
+                    let separationClass = 'separation-ok';
+                    let separationText = '✓ OK';
+                    let separationInfo = '';
+                    
+                    if (index > 0) {
+                        const distSep = arrival.distance_separation;
+                        
+                        // Determine status based on distance only
+                        if (arrival.separation_status === 'conflict') {
+                            separationClass = 'separation-danger';
+                            separationText = '✗ CONFLICT';
+                        } else if (arrival.separation_status === 'monitor') {
+                            separationClass = 'separation-warning';
+                            separationText = '⚠ MONITOR';
+                        } else {
+                            separationClass = 'separation-ok';
+                            separationText = '✓ OK';
+                        }
+                        
+                        separationInfo = `
+                            <tr class="separation-row">
+                                <td colspan="8" style="background: #f8f9fa; padding: 8px 12px;">
+                                    <div style="display: flex; align-items: center; gap: 20px;">
+                                        <span style="font-weight: 600; color: #666;">↕️ Separation from ${data.arrivals[index-1].callsign}:</span>
+                                        <span style="font-weight: 600;">📏 ${distSep} NM</span>
+                                        <span class="${separationClass}" style="margin-left: auto;">${separationText}</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }
+
+                    html += separationInfo + `
+                        <tr>
+                            <td><strong>${index + 1}</strong></td>
+                            <td><strong>${arrival.callsign}</strong></td>
+                            <td>${arrival.aircraft_type}</td>
+                            <td>${arrival.departure}</td>
+                            <td>${arrival.altitude} ft</td>
+                            <td>${arrival.groundspeed}</td>
+                            <td>${arrival.distance}</td>
+                            <td>${arrival.eta_minutes}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading arrivals:', error);
+            }
+        }
+
+        // Initial load
+        loadDepartures();
+        departuresRefreshInterval = setInterval(loadDepartures, 10000);
+
+        // Cleanup on window close
+        window.addEventListener('beforeunload', () => {
+            if (departuresRefreshInterval) clearInterval(departuresRefreshInterval);
+            if (arrivalsRefreshInterval) clearInterval(arrivalsRefreshInterval);
+        });
+    </script>
+</body>
+</html>
